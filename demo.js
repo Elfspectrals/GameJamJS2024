@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/loaders/GLTFLoader.js';
 
-let scene, camera, renderer, mesh, meshTwo, gltf;
+let scene, camera, renderer, mesh, meshTwo, character, level;
 
 function createFloor() {
     let floor = new THREE.Mesh(
@@ -21,6 +21,8 @@ function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(90, 1280 / 720, 0.1, 1000);
 
+    
+
     const gridHelper = new THREE.GridHelper(100, 10);
     scene.add(gridHelper);
 
@@ -36,7 +38,7 @@ function init() {
     );
     scene.add(meshTwo);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Couleur blanche, intensité 0.5
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
     createFloor();
@@ -48,58 +50,57 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // const controls = new OrbitControls(camera, renderer.domElement);
-    // controls.update();
-
     document.addEventListener('keydown', characterMovement);
     animate();
 
-    // Load the GLTF model
-    let loader = new GLTFLoader();
-    loader.load('../assets/scene.gltf', function (gltfLoaded) {
-        gltf = gltfLoaded;
-        gltf.scene.scale.set(0.1, 0.1, 0.1); // Scale the entire scene
+    let characterLoader = new GLTFLoader();
+    characterLoader.load('../assets/Character/scene.gltf', function (gltfLoaded) {
+        character = gltfLoaded.scene;
+        character.scale.set(0.1, 0.1, 0.1);
 
-        scene.add(gltf.scene);
+        scene.add(character);
 
-        // Set camera position relative to the loaded model
-        const boundingBox = new THREE.Box3().setFromObject(gltf.scene);
+        const boundingBox = new THREE.Box3().setFromObject(character);
         const center = boundingBox.getCenter(new THREE.Vector3());
         const size = boundingBox.getSize(new THREE.Vector3());
 
-        // Set camera position and lookAt based on the loaded model
         camera.position.copy(center);
-        // TODO : add camera from behind
-        camera.position.x -= size.x * 2; // Move camera to the right of the model
-        camera.position.y += size.y / 2; // Adjust camera height
-        camera.position.z += size.z * 2; // Move camera back along Z-axis to get a good view
-        camera.lookAt(center); // Look at the center of the loaded model
+        camera.position.x -= size.x * 2;
+        camera.position.y += size.y / 2;
+        camera.position.z += size.z * 2;
+        camera.lookAt(center);
+    });
+
+    let levelLoader = new GLTFLoader();
+    levelLoader.load('../assets/levelTest/scene.gltf', function (gltfLoaded) {
+        level = gltfLoaded.scene;
+        level.scale.set(10, 10, 10);
+        scene.add(level);
     });
 }
 
-
 function characterMovement(event) {
-    let speed = 0.5;
+    let speed = 5;
     switch (event.key) {
         case 'z':
-            gltf.scene.position.z += speed;
+            character.position.z += speed;
             camera.position.z += speed;
             break;
         case 's':
-            gltf.scene.position.z -= speed;
+            character.position.z -= speed;
             camera.position.z -= speed;
             break;
         case 'd':
-            gltf.scene.position.x -= speed;
-
+            character.position.x -= speed;
             camera.position.x -= speed;
             break;
         case 'q':
-            gltf.scene.position.x += speed;
+            character.position.x += speed;
             camera.position.x += speed;
             break;
     }
 }
+
 function animate() {
     requestAnimationFrame(animate);
     mesh.rotation.x += 0.01;
