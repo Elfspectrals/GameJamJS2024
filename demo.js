@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/loaders/GLTFLoader.js';
 
-let scene, camera, renderer, mesh, meshTwo;
+let scene, camera, renderer, mesh, meshTwo, gltf;
 
 function createFloor() {
     let floor = new THREE.Mesh(
@@ -16,6 +16,7 @@ function createFloor() {
 
     scene.add(floor);
 }
+
 function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(90, 1280 / 720, 0.1, 1000);
@@ -28,6 +29,7 @@ function init() {
         new THREE.MeshBasicMaterial({ color: 0xffcc00 })
     );
     scene.add(mesh);
+
     meshTwo = new THREE.Mesh(
         new THREE.BoxGeometry(1, 1, 1),
         new THREE.MeshBasicMaterial({ color: 'red' })
@@ -40,9 +42,7 @@ function init() {
     createFloor();
 
     camera.position.set(0, 0, 3);
-    camera.lookAt(new THREE.Vector3(0, 0, 0));
     scene.add(camera);
-
 
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -53,49 +53,50 @@ function init() {
 
     document.addEventListener('keydown', moveCube);
     animate();
-    // Removed the const keyword here
+
+    // Load the GLTF model
     let loader = new GLTFLoader();
+    loader.load('../assets/scene.gltf', function (gltfLoaded) {
+        gltf = gltfLoaded;
+        gltf.scene.scale.set(0.1, 0.1, 0.1); // Scale the entire scene
 
-    loader.load('../assets/scene.gltf', function (gltf) {
-       gltf.scene.scale.set(0.1, 0.1, 0.1); // Scale the entire scene
+        scene.add(gltf.scene);
 
-    // If you want to scale individual meshes:
-    // gltf.scene.traverse(function (child) {
-    //     if (child.isMesh) {
-    //         child.scale.set(0.1, 0.1, 0.1);
-    //     }
-    // });
+        // Set camera position relative to the loaded model
+        const boundingBox = new THREE.Box3().setFromObject(gltf.scene);
+        const center = boundingBox.getCenter(new THREE.Vector3());
+        const size = boundingBox.getSize(new THREE.Vector3());
 
-    scene.add(gltf.scene);
-    })
+        // Set camera position and lookAt based on the loaded model
+        camera.position.copy(center);
+        camera.position.x += size.x; // Move camera back along X-axis to get a good view
+        camera.position.y += size.y; // Adjust camera height
+        camera.position.z += size.z; // Move camera back along Z-axis to get a good view
+        camera.lookAt(center); // Look at the center of the loaded model
+    });
 }
-
 
 function moveCube(event) {
     let speed = 0.1;
     switch (event.key) {
         case 's':
-            mesh.position.z += speed;
-            camera.position.z += speed;
+            if (gltf) gltf.scene.position.z += speed;
+            console.log(camera.position.z);
             break;
         case 'z':
-            mesh.position.z -= speed;
+            if (gltf) gltf.scene.position.z -= speed;
             camera.position.z -= speed;
-
             break;
         case 'q':
-            mesh.position.x -= speed;
+            if (gltf) gltf.scene.position.x -= speed;
             camera.position.x -= speed;
             break;
         case 'd':
-            mesh.position.x += speed;
+            if (gltf) gltf.scene.position.x += speed;
             camera.position.x += speed;
             break;
     }
-    camera.position.set(mesh.position.x, mesh.position.y + 5, camera.position.z);
-    camera.lookAt(mesh.position);
 }
-
 
 function animate() {
     requestAnimationFrame(animate);
