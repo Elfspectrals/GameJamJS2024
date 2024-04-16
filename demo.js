@@ -77,21 +77,21 @@ function init() {
 }
 
 function moveCube(event) {
-    let speed = 0.1;
+    let speed = 0.5;
     switch (event.key) {
-        case 's':
-            if (gltf) gltf.scene.position.z += speed;
-            console.log(camera.position.z);
-            break;
         case 'z':
+            if (gltf) gltf.scene.position.z += speed;
+            camera.position.z += speed;
+            break;
+        case 's':
             if (gltf) gltf.scene.position.z -= speed;
             camera.position.z -= speed;
             break;
-        case 'q':
+        case 'd':
             if (gltf) gltf.scene.position.x -= speed;
             camera.position.x -= speed;
             break;
-        case 'd':
+        case 'q':
             if (gltf) gltf.scene.position.x += speed;
             camera.position.x += speed;
             break;
