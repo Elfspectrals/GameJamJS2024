@@ -48,10 +48,10 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.update();
+    // const controls = new OrbitControls(camera, renderer.domElement);
+    // controls.update();
 
-    document.addEventListener('keydown', moveCube);
+    document.addEventListener('keydown', characterMovement);
     animate();
 
     // Load the GLTF model
@@ -69,35 +69,37 @@ function init() {
 
         // Set camera position and lookAt based on the loaded model
         camera.position.copy(center);
-        camera.position.x += size.x; // Move camera back along X-axis to get a good view
-        camera.position.y += size.y; // Adjust camera height
-        camera.position.z += size.z; // Move camera back along Z-axis to get a good view
+        // TODO : add camera from behind
+        camera.position.x -= size.x * 2; // Move camera to the right of the model
+        camera.position.y += size.y / 2; // Adjust camera height
+        camera.position.z += size.z * 2; // Move camera back along Z-axis to get a good view
         camera.lookAt(center); // Look at the center of the loaded model
     });
 }
 
-function moveCube(event) {
+
+function characterMovement(event) {
     let speed = 0.5;
     switch (event.key) {
         case 'z':
-            if (gltf) gltf.scene.position.z += speed;
+            gltf.scene.position.z += speed;
             camera.position.z += speed;
             break;
         case 's':
-            if (gltf) gltf.scene.position.z -= speed;
+            gltf.scene.position.z -= speed;
             camera.position.z -= speed;
             break;
         case 'd':
-            if (gltf) gltf.scene.position.x -= speed;
+            gltf.scene.position.x -= speed;
+
             camera.position.x -= speed;
             break;
         case 'q':
-            if (gltf) gltf.scene.position.x += speed;
+            gltf.scene.position.x += speed;
             camera.position.x += speed;
             break;
     }
 }
-
 function animate() {
     requestAnimationFrame(animate);
     mesh.rotation.x += 0.01;
