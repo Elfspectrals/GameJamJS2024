@@ -8,8 +8,8 @@ const App = () => {
   const USE_WIREFRAME = false;
 
   useEffect(() => {
-    let scene, camera, renderer, mesh1, mesh2, mesh3, meshFloor;
-    
+    let scene, camera, renderer, mesh1, mesh2, mesh3, meshFloor, raycaster;
+
     const init = () => {
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -51,6 +51,9 @@ const App = () => {
       renderer.setSize(window.innerWidth, window.innerHeight);
       mountRef.current.appendChild(renderer.domElement);
 
+      // Initialize Raycaster
+      raycaster = new THREE.Raycaster();
+
       animate();
     };
 
@@ -81,6 +84,15 @@ const App = () => {
       }
       if (keyboard[39]) { // right arrow key
         camera.rotation.y += player.turnSpeed;
+      }
+
+      // Update Raycaster
+      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+      const intersects = raycaster.intersectObjects([mesh1, mesh2, mesh3]);
+
+      if (intersects.length > 0) {
+        console.log('La caméra regarde un mesh:', intersects[0].object);
+        intersects[0].object.material.color.set("yellow");
       }
 
       renderer.render(scene, camera);
