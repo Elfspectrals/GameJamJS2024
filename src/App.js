@@ -6,6 +6,7 @@ const App = () => {
   const keyboard = {};
   const player = { height: 1.8, speed: 0.2, turnSpeed: Math.PI * 0.02 };
   const USE_WIREFRAME = false;
+  const isMouseDownRef = useRef(false);
 
   useEffect(() => {
     let scene, camera, renderer, mesh1, mesh2, mesh3, meshFloor, raycaster;
@@ -90,7 +91,7 @@ const App = () => {
       raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
       const intersects = raycaster.intersectObjects([mesh1, mesh2, mesh3]);
 
-      if (intersects.length > 0) {
+      if (intersects.length > 0 && isMouseDownRef.current) {
         console.log('La caméra regarde un mesh:', intersects[0].object);
         intersects[0].object.material.color.set("yellow");
       }
@@ -106,15 +107,33 @@ const App = () => {
       keyboard[event.keyCode] = false;
     };
 
+    const mouseDown = (event) => {
+      if (event.button === 0) { // Left mouse button
+        isMouseDownRef.current = true;
+      }
+    };
+
+    const mouseUp = (event) => {
+      if (event.button === 0) { // Left mouse button
+        isMouseDownRef.current = false;
+      }
+    };
+
     window.addEventListener('keydown', keyDown);
     window.addEventListener('keyup', keyUp);
+    window.addEventListener('mousedown', mouseDown);
+    window.addEventListener('mouseup', mouseUp);
 
     init();
 
     return () => {
       window.removeEventListener('keydown', keyDown);
       window.removeEventListener('keyup', keyUp);
-      mountRef.current.removeChild(renderer.domElement);
+      window.removeEventListener('mousedown', mouseDown);
+      window.removeEventListener('mouseup', mouseUp);
+      if (renderer && mountRef.current) {
+        mountRef.current.removeChild(renderer.domElement);
+      }
     };
   }, []);
 
