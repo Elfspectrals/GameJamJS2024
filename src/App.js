@@ -1,5 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:4001'); 
 
 const App = () => {
   const mountRef = useRef(null);
@@ -7,6 +10,7 @@ const App = () => {
   const player = { height: 1.8, speed: 0.2, turnSpeed: Math.PI * 0.02 };
   const USE_WIREFRAME = false;
   const isMouseDownRef = useRef(false);
+  const [playerColor, setPlayerColor] = useState('white');
 
   useEffect(() => {
     let scene, camera, renderer, mesh1, mesh2, mesh3, meshFloor, raycaster;
@@ -93,7 +97,8 @@ const App = () => {
 
       if (intersects.length > 0 && isMouseDownRef.current) {
         console.log('La caméra regarde un mesh:', intersects[0].object);
-        intersects[0].object.material.color.set("yellow");
+        intersects[0].object.material.color.set(playerColor);
+        socket.emit('objectIntersected', { objectId: intersects[0].object.id, color: playerColor });
       }
 
       renderer.render(scene, camera);
@@ -124,6 +129,18 @@ const App = () => {
     window.addEventListener('mousedown', mouseDown);
     window.addEventListener('mouseup', mouseUp);
 
+    socket.on('objectIntersected', ({ objectId, color }) => {
+      [mesh1, mesh2, mesh3].forEach(mesh => {
+        if (mesh.id === objectId) {
+          mesh.material.color.set(color);
+        }
+      });
+    });
+
+    socket.on('assignColor', (color) => {
+      setPlayerColor(color);
+    });
+
     init();
 
     return () => {
@@ -131,11 +148,13 @@ const App = () => {
       window.removeEventListener('keyup', keyUp);
       window.removeEventListener('mousedown', mouseDown);
       window.removeEventListener('mouseup', mouseUp);
+      socket.off('objectIntersected');
+      socket.off('assignColor');
       if (renderer && mountRef.current) {
         mountRef.current.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [playerColor]);
 
   return (
     <div ref={mountRef} style={{ width: '100vw', height: '100vh' }} />
