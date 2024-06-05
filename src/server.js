@@ -22,6 +22,7 @@ app.use(cors({
 }));
 
 const playerColors = {};
+const playerPositions = {};
 const colors = ["red", "blue", "green", "yellow", "violet", "orange"];
 
 io.on('connection', (socket) => {
@@ -30,9 +31,25 @@ io.on('connection', (socket) => {
   // Assign a color to the new player
   const playerColor = colors.pop() || "white";
   playerColors[socket.id] = playerColor;
-  
+  playerPositions[socket.id] = { x: 0, y: 1.8, z: -5 }; // Initial position
+
   // Notify the client of their color
   socket.emit('assignColor', playerColor);
+
+  // Send the list of existing players to the new player
+  socket.emit('existingPlayers', Object.keys(playerColors).map(id => ({
+    id,
+    color: playerColors[id],
+    position: playerPositions[id]
+  })));
+
+  // Notify existing players about the new player
+  socket.broadcast.emit('playerJoined', { id: socket.id, color: playerColor, position: playerPositions[socket.id] });
+
+  socket.on('updatePosition', (position) => {
+    playerPositions[socket.id] = position;
+    socket.broadcast.emit('updatePosition', { id: socket.id, position });
+  });
 
   socket.on('objectIntersected', (data) => {
     const { objectId, color } = data;
@@ -41,9 +58,12 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('Client disconnected');
+    // Notify other players about the disconnect
+    socket.broadcast.emit('playerLeft', socket.id);
     // Reclaim the color
     colors.push(playerColors[socket.id]);
     delete playerColors[socket.id];
+    delete playerPositions[socket.id];
   });
 });
 

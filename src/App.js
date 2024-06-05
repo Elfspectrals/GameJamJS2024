@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { io } from 'socket.io-client';
 
-const socket = io('http://localhost:4001'); 
+const socket = io('http://localhost:4001');
 
 const App = () => {
   const mountRef = useRef(null);
@@ -11,6 +11,8 @@ const App = () => {
   const USE_WIREFRAME = false;
   const isMouseDownRef = useRef(false);
   const [playerColor, setPlayerColor] = useState('white');
+  const playerBlocks = useRef({});
+  const localPlayer = useRef({ x: 0, y: player.height, z: -5 });
 
   useEffect(() => {
     let scene, camera, renderer, mesh1, mesh2, mesh3, meshFloor, raycaster;
@@ -46,10 +48,10 @@ const App = () => {
         new THREE.PlaneGeometry(10, 10, 10, 10),
         new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: USE_WIREFRAME })
       );
-      meshFloor.rotation.x -= Math.PI / 2; 
+      meshFloor.rotation.x -= Math.PI / 2;
       scene.add(meshFloor);
 
-      camera.position.set(0, player.height, -5);
+      camera.position.set(localPlayer.current.x, localPlayer.current.y, localPlayer.current.z);
       camera.lookAt(new THREE.Vector3(0, player.height, 0));
 
       renderer = new THREE.WebGLRenderer();
@@ -101,6 +103,12 @@ const App = () => {
         socket.emit('objectIntersected', { objectId: intersects[0].object.id, color: playerColor });
       }
 
+      // Update local player position
+      localPlayer.current.x = camera.position.x;
+      localPlayer.current.y = camera.position.y;
+      localPlayer.current.z = camera.position.z;
+      socket.emit('updatePosition', localPlayer.current);
+
       renderer.render(scene, camera);
     };
 
@@ -141,6 +149,45 @@ const App = () => {
       setPlayerColor(color);
     });
 
+    socket.on('existingPlayers', (players) => {
+      players.forEach(({ id, color, position }) => {
+        if (!playerBlocks.current[id]) {
+          const playerMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(1, 1, 1),
+            new THREE.MeshBasicMaterial({ color, wireframe: USE_WIREFRAME })
+          );
+          playerMesh.position.set(position.x, position.y, position.z);
+          scene.add(playerMesh);
+          playerBlocks.current[id] = playerMesh;
+        }
+      });
+    });
+
+    socket.on('playerJoined', ({ id, color, position }) => {
+      if (!playerBlocks.current[id]) {
+        const playerMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(1, 1, 1),
+          new THREE.MeshBasicMaterial({ color, wireframe: USE_WIREFRAME })
+        );
+        playerMesh.position.set(position.x, position.y, position.z);
+        scene.add(playerMesh);
+        playerBlocks.current[id] = playerMesh;
+      }
+    });
+
+    socket.on('updatePosition', ({ id, position }) => {
+      if (playerBlocks.current[id]) {
+        playerBlocks.current[id].position.set(position.x, position.y, position.z);
+      }
+    });
+
+    socket.on('playerLeft', (id) => {
+      if (playerBlocks.current[id]) {
+        scene.remove(playerBlocks.current[id]);
+        delete playerBlocks.current[id];
+      }
+    });
+
     init();
 
     return () => {
@@ -150,6 +197,10 @@ const App = () => {
       window.removeEventListener('mouseup', mouseUp);
       socket.off('objectIntersected');
       socket.off('assignColor');
+      socket.off('existingPlayers');
+      socket.off('playerJoined');
+      socket.off('updatePosition');
+      socket.off('playerLeft');
       if (renderer && mountRef.current) {
         mountRef.current.removeChild(renderer.domElement);
       }
